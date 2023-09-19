@@ -154,7 +154,6 @@ app.get("/api/getEvents", async (req, res) => {
             $gte: new Date()
         }
     });
-    console.log(events);
     res.json(events);
 })
 

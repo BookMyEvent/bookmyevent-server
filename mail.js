@@ -14,6 +14,8 @@ const sendMail = (date,session,dept,event,venue,email) => {
         }
     });
 
+    console.log(transporter);
+
     var mailOptions = {
         from: 'svcebookmyevent@gmail.com',
         to: email,
