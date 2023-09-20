@@ -95,7 +95,7 @@ const sendMail = (date,session,dept,event,venue,email) => {
     else if (venue === "BIO TECH SEMINAR HALL") {
         mailOptions.cc = "hodbt@svce.ac.in"
     }
-    else if (venue === "CONFERENCE HALL") {
+    else if (venue === "LIBRARY CONFERENCE HALL") {
         mailOptions.cc = "principal@svce.ac.in,hodli@svce.ac.in,sgopi@svce.ac.in,rk562225@gmail.com,Moonstaarchn@gmail.com"
     }
 
