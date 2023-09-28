@@ -1,24 +1,34 @@
 var nodemailer = require('nodemailer');
 
+var transporter = nodemailer.createTransport({
+    service: 'gmail',
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
+    auth: {
+        user: 'svcebookmyevent@gmail.com',
+        pass: process.env.GMAIL_PASSWORD
+    }
+});
 
-const sendMail = (date,session,dept,event,venue,email) => {
-
-    var transporter = nodemailer.createTransport({
-        service: 'gmail',
-        host: "smtp.gmail.com",
-        port: 587,
-        secure: false,
-        auth: {
-            user: 'svcebookmyevent@gmail.com',
-            pass: process.env.GMAIL_PASSWORD
+const MailTransport = (mailOptions) => {
+    transporter.sendMail(mailOptions, function (error, info) {
+        if (error) {
+            console.log(error);
+            MailTransport(mailOptions);
+        } else {
+            console.log('Email sent: ' + info.response);
         }
     });
+}
 
-    console.log(transporter);
+
+const sendMail = (date, session, dept, event, venue, email) => {
 
     var mailOptions = {
         from: 'svcebookmyevent@gmail.com',
         to: email,
+        cc: "gayathri@svce.ac.in,2021cs0053@svce.ac.in",
         subject: `Event registered in ${venue} on ${date}`,
         text: 'Event name - venue',
         html: `
@@ -84,28 +94,23 @@ const sendMail = (date,session,dept,event,venue,email) => {
     };
 
     if (venue === "FUNCTION HALL" || venue === "VIDEO HALL") {
-        mailOptions.cc = "hodec@svce.ac.in"
+        mailOptions.cc = ",hodec@svce.ac.in"
     }
     else if (venue === "LIBRARY SEMINAR HALL") {
-        mailOptions.cc = "hodli@svce.ac.in,rk562225@gmail.com,Moonstaarchn@gmail.com"
+        mailOptions.cc = ",hodli@svce.ac.in,rk562225@gmail.com,Moonstaarchn@gmail.com"
     }
     else if (venue === "MULTI PURPOSE HALL") {
-        mailOptions.cc = "principal@svce.ac.in,adminexecutive@svce.ac.in"
+        mailOptions.cc = ",principal@svce.ac.in,adminexecutive@svce.ac.in"
     }
     else if (venue === "BIO TECH SEMINAR HALL") {
-        mailOptions.cc = "hodbt@svce.ac.in"
+        mailOptions.cc = ",hodbt@svce.ac.in"
     }
     else if (venue === "LIBRARY CONFERENCE HALL") {
-        mailOptions.cc = "principal@svce.ac.in,hodli@svce.ac.in,sgopi@svce.ac.in,rk562225@gmail.com,Moonstaarchn@gmail.com"
+        mailOptions.cc = ",principal@svce.ac.in,hodli@svce.ac.in,sgopi@svce.ac.in,rk562225@gmail.com,Moonstaarchn@gmail.com"
     }
 
-    transporter.sendMail(mailOptions, function (error, info) {
-        if (error) {
-            console.log(error);
-        } else {
-            console.log('Email sent: ' + info.response);
-        }
-    });
+    MailTransport(mailOptions);
+
 }
 
 module.exports = sendMail;
