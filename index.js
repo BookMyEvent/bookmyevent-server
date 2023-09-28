@@ -35,15 +35,7 @@ async function serverCheck(date, venue, session, id) {
 
 app.post("/api/checkDate", async (req, res) => {
     const { date, session } = req.body;
-    console.log(date,session)
     const result = await eventModel.find({ date, venue: { $ne: "OTHERS**" } });
-    let result1 = undefined;
-    if(session === "FN" || session === "AN"){
-        result1 = await eventModel.find({ date, venue: { $ne: "OTHERS**" }, session:{$in:['Full Day',session]} },{venue:1});
-    }
-    else{
-        result1 = await eventModel.find({ date, venue: { $ne: "OTHERS**" }, session:{$in:['FN','AN','Full Day']} },{venue:1});
-    }
     let blocked = [];
     if (session === "Full Day") {
         for (let item of result) {
@@ -65,7 +57,6 @@ app.post("/api/checkDate", async (req, res) => {
             blocked
         });
     }
-    console.log(blocked);
 })
 
 //Add an Event
