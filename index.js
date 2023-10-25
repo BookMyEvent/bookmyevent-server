@@ -99,7 +99,7 @@ app.post("/api/addEvent", async (req, res) => {
                 venueName,
             }
         ])
-        sendMail(date,session,dept,event,venue,email);
+        sendMail(date,session,dept!="false" ? dept : club,event,venue,email);
         res.json({ status: "Success" });
     }
     else
