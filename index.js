@@ -34,6 +34,16 @@ async function serverCheck(date, venue, session, id) {
 // Check AVailability
 
 app.post("/api/checkDate", async (req, res) => {
+
+    /*
+    Format -> {
+                    blocked : [
+                                [event_id,event_venue],
+                                ...
+                            ]
+            }
+
+    */
     const { date, session } = req.body;
     const result = await eventModel.find({ date, venue: { $ne: "OTHERS**" } });
     let blocked = [];
@@ -62,19 +72,20 @@ app.post("/api/checkDate", async (req, res) => {
 //Add an Event
 
 app.post("/api/addEvent", async (req, res) => {
+    console.log(req.body);
     const { date,
         audience,
         venue,
         event,
         description,
-        start,
-        end,
+        startTime,
+        endTime,
         link,
         session,
         club,
-        dept,
+        department,
         image,
-        allowed,
+        target_audience,
         venueName,
         email
     } = req.body;
@@ -88,18 +99,18 @@ app.post("/api/addEvent", async (req, res) => {
                 venue,
                 event,
                 description,
-                startTime: start,
-                endTime: end,
+                startTime,
+                endTime,
                 session,
                 link,
-                club: club && club,
-                department: dept && dept,
+                club,
+                department,
                 image,
-                target: allowed,
-                venueName,
+                target: target_audience,
+                venueName
             }
         ])
-        sendMail(date,session,dept!="false" ? dept : club,event,venue,email);
+        sendMail(date,session,department!="false" ? department : club,event,venue,email);
         res.json({ status: "Success" });
     }
     else
@@ -229,7 +240,7 @@ app.post("/api/profile", async (req, res) => {
 //Retrieve Core Department list
 
 app.get("/api/dept", async (req, res) => {
-    const result = await userModel.find({ type: "HOD", deptType: "Core" }, { department: 1, _id: 0 });
+    const result = await userModel.find({ type: "HOD", deptType: "Core" }, { department: 1, _id: 0 }).sort({department:'asc'});
     let dept = [];
     for (let item of result) {
         dept.push(item['department']);
@@ -286,4 +297,5 @@ app.get("/api/eventhistory", async (req, res) => {
     res.json({ live, upcoming, past })
 })
 
-app.listen(8000, () => { })
+app.listen(8080, () => { })
+
