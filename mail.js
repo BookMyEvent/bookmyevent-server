@@ -27,6 +27,8 @@ const MailTransport = (mailOptions) => {
 
 const sendMail = (date, session, dept, event, venue, email) => {
 
+    date = new Date(date)
+
     var mailOptions = {
         from: 'svcebookmyevent@gmail.com',
         to: email,
