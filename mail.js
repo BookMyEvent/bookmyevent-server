@@ -70,7 +70,7 @@ const sendMail = (date, session, dept, event, venue, email) => {
                 Date</td>
             <td
                 style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;font-size:larger;padding:10px;margin:0;border-bottom:1px solid black;border-right: 1px solid black;">
-                ${date}
+                ${date.getDate()}/${date.getMonth()+1}/${date.getFullYear()}
             </td>
         </tr>
         <tr>
