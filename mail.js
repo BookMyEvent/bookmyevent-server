@@ -1,4 +1,6 @@
 var nodemailer = require('nodemailer');
+require('dotenv').config();
+
 
 var transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -7,7 +9,7 @@ var transporter = nodemailer.createTransport({
     secure: false,
     auth: {
         user: 'svcebookmyevent@gmail.com',
-        pass: process.env.GMAIL_PASSWORD
+        pass: process.env.GMAIL_PASS
     }
 });
 
@@ -28,7 +30,7 @@ const sendMail = (date, session, dept, event, venue, email) => {
     var mailOptions = {
         from: 'svcebookmyevent@gmail.com',
         to: email,
-        subject: `Event registered in ${venue} on ${date}`,
+        subject: `Event registered in ${venue} on ${date.getDate()}/${date.getMonth()+1}/${date.getFullYear()}`,
         text: 'Event name - venue',
         html: `
   
