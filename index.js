@@ -1,11 +1,14 @@
 const express = require('express');
+const app = express();
+
 require("dotenv").config();
 const firebase = require('./firebase-server');
 const { getAuth } = require('firebase-admin/auth')
 const mongoose = require('mongoose');
 
 
-const app = express();
+
+
 const cors = require('cors');
 let bodyParser = require("body-parser");
 const auth = getAuth(firebase);
@@ -71,9 +74,21 @@ app.post("/api/checkDate", async (req, res) => {
 
 //Add an Event
 
-app.post("/api/addEvent", async (req, res) => {
-    console.log(req.body);
-    const { date,
+
+let queue = []
+let processing = false;
+
+async function processNext() {
+    if (queue.length === 0) {
+        processing = false;
+        return;
+    }
+
+    processing = true;
+    
+    const { req, res, next } = queue.shift();
+
+    let { date,
         audience,
         venue,
         event,
@@ -91,10 +106,11 @@ app.post("/api/addEvent", async (req, res) => {
     } = req.body;
 
     const status = venue === "OTHERS**" ? true : await serverCheck(date, venue, session);
+
     if (status === true) {
         await eventModel.insertMany([
             {
-                date: new Date(date),
+                date,
                 audience,
                 venue,
                 event,
@@ -113,9 +129,23 @@ app.post("/api/addEvent", async (req, res) => {
         sendMail(date,session,department!="false" ? department : club,event,venue,email);
         res.json({ status: "Success" });
     }
-    else
+    else{
         res.json({ status: "OOPS Slot has been allocated" })
-})
+    }
+    processing = false;
+    processNext();
+}
+
+function addEventMiddleware(req,res,next) {
+    queue.push({ req, res, next });
+    if (!processing) {
+        processNext(); // Start processing if not already processing
+    }
+}
+
+
+app.post("/api/addEvent", addEventMiddleware);
+
 
 //Retrieve User
 
