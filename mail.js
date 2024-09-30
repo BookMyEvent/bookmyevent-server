@@ -1,119 +1,118 @@
-var nodemailer = require('nodemailer');
-require('dotenv').config();
+const nodemailer = require("nodemailer");
+const { google } = require("googleapis");
+require("dotenv").config();
 
+const OAuth2 = google.auth.OAuth2;
+const oauth2Client = new OAuth2(
+  process.env.MAIL_CLIENT_ID,
+  process.env.CLIENT_SECRET,
+  "https://developers.google.com/oauthplayground"
+);
 
-var transporter = nodemailer.createTransport({
-    service: 'gmail',
-    host: "smtp.gmail.com",
-    port: 587,
-    secure: false,
-    auth: {
-        user: 'svcebookmyevent@gmail.com',
-        pass: process.env.GMAIL_PASS
-    }
+oauth2Client.setCredentials({
+  refresh_token: process.env.REFRESH_TOKEN,
 });
 
-const MailTransport = (mailOptions) => {
-    transporter.sendMail(mailOptions, function (error, info) {
-        if (error) {
-            console.log(error);
-            MailTransport(mailOptions);
-        } else {
-            console.log('Email sent: ' + info.response);
-        }
-    });
-}
+const sendMail = async (date, session, dept, event, venue, email) => {
+  date = new Date(date);
 
+  const accessToken = await oauth2Client.getAccessToken();
 
-const sendMail = (date, session, dept, event, venue, email) => {
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      type: "OAuth2",
+      user: process.env.GMAIL_ID,
+      accessToken,
+      clientId: process.env.MAIL_CLIENT_ID,
+      clientSecret: process.env.CLIENT_SECRET,
+      refreshToken: process.env.REFRESH_TOKEN,
+    },
+  });
 
-    date = new Date(date)
-
-    var mailOptions = {
-        from: 'svcebookmyevent@gmail.com',
-        to: email,
-        subject: `Event registered in ${venue} on ${date.getDate()}/${date.getMonth()+1}/${date.getFullYear()}`,
-        text: 'Event name - venue',
-        html: `
+  var mailOptions = {
+    from: process.env.GMAIL_ID,
+    to: email,
+    subject: `Event registered in ${venue} on ${date.getDate()}/${
+      date.getMonth() + 1
+    }/${date.getFullYear()}`,
+    html: `
   
-  <h5 style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;font-size: larger">Your event
-        has been booked succesfully.</h5>
-    <h5 style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;font-size: larger;margin: 5px;">
-        Event details:</h5>
-    <table style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;width:100%">
-        <tr>
-            <td
-                style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;font-size:larger;padding:10px;margin:0;border-top:1px solid black;border-bottom:1px solid black;border-left: 1px solid black;border-right: 1px solid black;">
-                Event name</td>
-            <td
-                style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;font-size:larger;padding:10px;margin:0;border-top:1px solid black;border-bottom:1px solid black;border-right: 1px solid black;">
-                ${event}
-            </td>
-        </tr>
-        <tr>
-            <td
-                style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;font-size:larger;padding:10px;margin:0;border-bottom:1px solid black;border-left: 1px solid black;border-right: 1px solid black;">
-                Venue</td>
-            <td
-                style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;font-size:larger;padding:10px;margin:0;border-bottom:1px solid black;border-right: 1px solid black;">
-                ${venue}
-            </td>
-        </tr>
-        <tr>
-            <td
-                style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;font-size:larger;padding:10px;margin:0;border-bottom:1px solid black;border-left: 1px solid black;border-right: 1px solid black;">
-                Session</td>
-            <td
-                style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;font-size:larger;padding:10px;margin:0;border-bottom:1px solid black;border-right: 1px solid black;">
-                ${session}
-            </td>
-        </tr>
-        <tr>
-            <td
-                style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;font-size:larger;padding:10px;margin:0;border-bottom:1px solid black;border-left: 1px solid black;border-right: 1px solid black;">
-                Date</td>
-            <td
-                style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;font-size:larger;padding:10px;margin:0;border-bottom:1px solid black;border-right: 1px solid black;">
-                ${date.getDate()}/${date.getMonth()+1}/${date.getFullYear()}
-            </td>
-        </tr>
-        <tr>
-            <td
-                style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;font-size:larger;padding:10px;margin:0;border-bottom:1px solid black;border-left: 1px solid black;border-right: 1px solid black;">
-                Department</td>
-            <td
-                style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;font-size:larger;padding:10px;margin:0;border-bottom:1px solid black;border-right: 1px solid black;">
-                ${dept}
-            </td>
-        </tr>
-    </table>
+    <h5 style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;font-size: larger">Your event
+          has been booked succesfully.</h5>
+      <h5 style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;font-size: larger;margin: 5px;">
+          Event details:</h5>
+      <table style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;width:100%">
+          <tr>
+              <td
+                  style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;font-size:larger;padding:10px;margin:0;border-top:1px solid black;border-bottom:1px solid black;border-left: 1px solid black;border-right: 1px solid black;">
+                  Event name</td>
+              <td
+                  style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;font-size:larger;padding:10px;margin:0;border-top:1px solid black;border-bottom:1px solid black;border-right: 1px solid black;">
+                  ${event}
+              </td>
+          </tr>
+          <tr>
+              <td
+                  style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;font-size:larger;padding:10px;margin:0;border-bottom:1px solid black;border-left: 1px solid black;border-right: 1px solid black;">
+                  Venue</td>
+              <td
+                  style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;font-size:larger;padding:10px;margin:0;border-bottom:1px solid black;border-right: 1px solid black;">
+                  ${venue}
+              </td>
+          </tr>
+          <tr>
+              <td
+                  style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;font-size:larger;padding:10px;margin:0;border-bottom:1px solid black;border-left: 1px solid black;border-right: 1px solid black;">
+                  Session</td>
+              <td
+                  style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;font-size:larger;padding:10px;margin:0;border-bottom:1px solid black;border-right: 1px solid black;">
+                  ${session}
+              </td>
+          </tr>
+          <tr>
+              <td
+                  style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;font-size:larger;padding:10px;margin:0;border-bottom:1px solid black;border-left: 1px solid black;border-right: 1px solid black;">
+                  Date</td>
+              <td
+                  style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;font-size:larger;padding:10px;margin:0;border-bottom:1px solid black;border-right: 1px solid black;">
+                  ${date.getDate()}/${date.getMonth()+1}/${date.getFullYear()}
+              </td>
+          </tr>
+          <tr>
+              <td
+                  style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;font-size:larger;padding:10px;margin:0;border-bottom:1px solid black;border-left: 1px solid black;border-right: 1px solid black;">
+                  Department</td>
+              <td
+                  style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;font-size:larger;padding:10px;margin:0;border-bottom:1px solid black;border-right: 1px solid black;">
+                  ${dept}
+              </td>
+          </tr>
+      </table>
+  
+      <h3
+          style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;padding-top: 1%;margin: 0%;margin-top: 2%;">
+          Regards,</h3>
+      <h3 style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;padding-top: 1%;margin: 0%;">SVCE
+          BookMyEvent</h3>
+    `
+  };
 
-    <h3
-        style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;padding-top: 1%;margin: 0%;margin-top: 2%;">
-        Regards,</h3>
-    <h3 style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;padding-top: 1%;margin: 0%;">SVCE
-        BookMyEvent</h3>
-  `
-    };
+  if (venue === "FUNCTION HALL" || venue === "VIDEO HALL") {
+    mailOptions.cc = "hodec@svce.ac.in";
+  } else if (venue === "LIBRARY SEMINAR HALL") {
+    mailOptions.cc =
+      "hodli@svce.ac.in,rk562225@gmail.com,Moonstaarchn@gmail.com";
+  } else if (venue === "MULTI PURPOSE HALL") {
+    mailOptions.cc = "principal@svce.ac.in,adminexecutive@svce.ac.in";
+  } else if (venue === "BIO TECH SEMINAR HALL") {
+    mailOptions.cc = "hodbt@svce.ac.in";
+  } else if (venue === "LIBRARY CONFERENCE HALL") {
+    mailOptions.cc =
+      "principal@svce.ac.in,hodli@svce.ac.in,sgopi@svce.ac.in,rk562225@gmail.com,Moonstaarchn@gmail.com";
+  }
 
-    if (venue === "FUNCTION HALL" || venue === "VIDEO HALL") {
-        mailOptions.cc = "hodec@svce.ac.in"
-    }
-    else if (venue === "LIBRARY SEMINAR HALL") {
-        mailOptions.cc = "hodli@svce.ac.in,rk562225@gmail.com,Moonstaarchn@gmail.com"
-    }
-    else if (venue === "MULTI PURPOSE HALL") {
-        mailOptions.cc = "principal@svce.ac.in,adminexecutive@svce.ac.in"
-    }
-    else if (venue === "BIO TECH SEMINAR HALL") {
-        mailOptions.cc = "hodbt@svce.ac.in"
-    }
-    else if (venue === "LIBRARY CONFERENCE HALL") {
-        mailOptions.cc = "principal@svce.ac.in,hodli@svce.ac.in,sgopi@svce.ac.in,rk562225@gmail.com,Moonstaarchn@gmail.com"
-    }
-
-    MailTransport(mailOptions);
-
-}
+  await transporter.sendMail(mailOptions);
+};
 
 module.exports = sendMail;

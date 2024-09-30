@@ -126,7 +126,7 @@ async function processNext() {
                 venueName
             }
         ])
-        sendMail(date,session,department!="false" ? department : club,event,venue,email);
+        await sendMail(date,session,department!="false" ? department : club,event,venue === "OTHERS**" ? venueName : venue,email);
         res.json({ status: "Success" });
     }
     else{
