@@ -1,41 +1,22 @@
 const nodemailer = require("nodemailer");
-const { google } = require("googleapis");
 require("dotenv").config();
-
-const OAuth2 = google.auth.OAuth2;
-const oauth2Client = new OAuth2(
-  process.env.MAIL_CLIENT_ID,
-  process.env.CLIENT_SECRET,
-  "https://developers.google.com/oauthplayground"
-);
-
-oauth2Client.setCredentials({
-  refresh_token: process.env.REFRESH_TOKEN,
-});
 
 const sendMail = async (date, session, dept, event, venue, email) => {
   date = new Date(date);
 
-  const accessToken = await oauth2Client.getAccessToken();
-
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
-      type: "OAuth2",
       user: process.env.GMAIL_ID,
-      accessToken,
-      clientId: process.env.MAIL_CLIENT_ID,
-      clientSecret: process.env.CLIENT_SECRET,
-      refreshToken: process.env.REFRESH_TOKEN,
+      pass: process.env.GMAIL_PASS,
     },
   });
 
   var mailOptions = {
     from: process.env.GMAIL_ID,
     to: email,
-    subject: `Event registered in ${venue} on ${date.getDate()}/${
-      date.getMonth() + 1
-    }/${date.getFullYear()}`,
+    subject: `Event registered in ${venue} on ${date.getDate()}/${date.getMonth() + 1
+      }/${date.getFullYear()}`,
     html: `
   
     <h5 style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;font-size: larger">Your event
@@ -76,7 +57,7 @@ const sendMail = async (date, session, dept, event, venue, email) => {
                   Date</td>
               <td
                   style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;font-size:larger;padding:10px;margin:0;border-bottom:1px solid black;border-right: 1px solid black;">
-                  ${date.getDate()}/${date.getMonth()+1}/${date.getFullYear()}
+                  ${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}
               </td>
           </tr>
           <tr>
