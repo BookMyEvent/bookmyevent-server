@@ -18,14 +18,27 @@ const sendMail = require('./mail');
 
 mongoose.connect(`mongodb+srv://bookmyevent:${process.env.MONGO_DB_PASSWORD}@cluster0.d4uetk9.mongodb.net/?retryWrites=true&w=majority`, { useNewUrlParser: true, useUnifiedTopology: true });
 
-app.use(cors());
+const whitelist = ["https://svcebookmyevent.in", "http://localhost:5173", "http://localhost:5174", "https://bookmyeventserver.vercel.app"];
+const corsOptions = {
+    origin: function (origin, callback) {
+        if (whitelist.indexOf(origin) !== -1 || !origin) {
+            callback(null, true);
+        } else {
+            callback(new Error("Not allowed by CORS"));
+        }
+    },
+    credentials: true,
+};
+
+app.use(cors(corsOptions));
+
 app.use(bodyParser.json({ limit: '10mb', extended: true }))
 app.use(bodyParser.urlencoded({ limit: '10mb', extended: false }))
 app.use(express.json());
 
 
 async function serverCheck(date, venue, session, id) {
-    const res = await eventModel.find({ date, venue, session: { $in: ['Full Day', session] } }); 
+    const res = await eventModel.find({ date, venue, session: { $in: ['Full Day', session] } });
     if (res.length === 0)
         return true;
     else if (String(res[0]._id) === id)
@@ -33,6 +46,8 @@ async function serverCheck(date, venue, session, id) {
     else
         return false;
 }
+
+
 
 // Check AVailability
 
@@ -85,7 +100,7 @@ async function processNext() {
     }
 
     processing = true;
-    
+
     const { req, res, next } = queue.shift();
 
     let { date,
@@ -126,17 +141,17 @@ async function processNext() {
                 venueName
             }
         ])
-        await sendMail(date,session,department!="false" ? department : club,event,venue === "OTHERS**" ? venueName : venue,email);
+        await sendMail(date, session, department != "false" ? department : club, event, venue === "OTHERS**" ? venueName : venue, email);
         res.json({ status: "Success" });
     }
-    else{
+    else {
         res.json({ status: "OOPS Slot has been allocated" })
     }
     processing = false;
     processNext();
 }
 
-function addEventMiddleware(req,res,next) {
+function addEventMiddleware(req, res, next) {
     queue.push({ req, res, next });
     if (!processing) {
         processNext(); // Start processing if not already processing
@@ -201,7 +216,7 @@ app.get("/api/getEvents", async (req, res) => {
 // Retrieve All Events
 
 app.get("/api/allEvents", async (req, res) => {
-    const event = await eventModel.find({}, { image: 0, _id: 0 }).sort({startTime:1});
+    const event = await eventModel.find({}, { image: 0, _id: 0 }).sort({ startTime: 1 });
     res.json({ event });
 })
 
@@ -270,7 +285,7 @@ app.post("/api/profile", async (req, res) => {
 //Retrieve Core Department list
 
 app.get("/api/dept", async (req, res) => {
-    const result = await userModel.find({ type: "HOD", deptType: "Core" }, { department: 1, _id: 0 }).sort({department:'asc'});
+    const result = await userModel.find({ type: "HOD", deptType: "Core" }, { department: 1, _id: 0 }).sort({ department: 'asc' });
     let dept = [];
     for (let item of result) {
         dept.push(item['department']);
@@ -328,4 +343,6 @@ app.get("/api/eventhistory", async (req, res) => {
 })
 
 app.listen(8080, () => { })
+
+module.exports = app;
 
