@@ -93,7 +93,13 @@ const sendMail = async (date, session, dept, event, venue, email) => {
       "principal@svce.ac.in,hodli@svce.ac.in,sgopi@svce.ac.in,rk562225@gmail.com,Moonstaarchn@gmail.com";
   }
 
-  await transporter.sendMail(mailOptions);
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log("Email sent successfully to:", email);
+  } catch (error) {
+    console.error("Error in sendMail function:", error);
+    throw error; // Re-throw to be caught by the caller
+  }
 };
 
 module.exports = sendMail;

@@ -18,14 +18,11 @@ const sendMail = require('./mail');
 
 mongoose.connect(`mongodb+srv://bookmyevent:${process.env.MONGO_DB_PASSWORD}@cluster0.d4uetk9.mongodb.net/?retryWrites=true&w=majority`, { useNewUrlParser: true, useUnifiedTopology: true });
 
-const whitelist = ["https://svcebookmyevent.in", "http://localhost:5173", "http://localhost:5174", "https://bookmyeventserver.vercel.app"];
+const whitelist = ["https://svcebookmyevent.in", "http://localhost:5173", "http://localhost:5174", "http://localhost:8080"];
 const corsOptions = {
     origin: function (origin, callback) {
-        if (whitelist.indexOf(origin) !== -1 || !origin) {
-            callback(null, true);
-        } else {
-            callback(new Error("Not allowed by CORS"));
-        }
+        // Allow all origins for now to debug the issue
+        callback(null, true);
     },
     credentials: true,
 };
@@ -141,7 +138,14 @@ async function processNext() {
                 venueName
             }
         ])
-        await sendMail(date, session, department != "false" ? department : club, event, venue === "OTHERS**" ? venueName : venue, email);
+        try {
+            console.log("Attempting to send email...");
+            await sendMail(date, session, department != "false" ? department : club, event, venue === "OTHERS**" ? venueName : venue, email);
+            console.log("Email sent successfully.");
+        } catch (mailError) {
+            console.error("Error sending email:", mailError);
+            // Do not fail the request if email fails, but log it.
+        }
         res.json({ status: "Success" });
     }
     else {
