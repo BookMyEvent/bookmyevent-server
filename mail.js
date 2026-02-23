@@ -5,7 +5,9 @@ const sendMail = async (date, session, dept, event, venue, email) => {
   date = new Date(date);
 
   const transporter = nodemailer.createTransport({
-    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
     auth: {
       user: process.env.GMAIL_ID,
       pass: process.env.GMAIL_PASS,
@@ -15,10 +17,11 @@ const sendMail = async (date, session, dept, event, venue, email) => {
   var mailOptions = {
     from: process.env.GMAIL_ID,
     to: email,
-    subject: `Event registered in ${venue} on ${date.getDate()}/${date.getMonth() + 1
-      }/${date.getFullYear()}`,
+    subject: `Event registered in ${venue} on ${date.getDate()}/${
+      date.getMonth() + 1
+    }/${date.getFullYear()}`,
     html: `
-  
+
     <h5 style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;font-size: larger">Your event
           has been booked succesfully.</h5>
       <h5 style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;font-size: larger;margin: 5px;">
@@ -70,13 +73,13 @@ const sendMail = async (date, session, dept, event, venue, email) => {
               </td>
           </tr>
       </table>
-  
+
       <h3
           style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;padding-top: 1%;margin: 0%;margin-top: 2%;">
           Regards,</h3>
       <h3 style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;padding-top: 1%;margin: 0%;">SVCE
           BookMyEvent</h3>
-    `
+    `,
   };
 
   if (venue === "FUNCTION HALL" || venue === "VIDEO HALL") {
@@ -103,3 +106,4 @@ const sendMail = async (date, session, dept, event, venue, email) => {
 };
 
 module.exports = sendMail;
+
