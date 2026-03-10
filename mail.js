@@ -14,12 +14,21 @@ const sendMail = async (date, session, dept, event, venue, email) => {
     },
   });
 
+  let extraMessage = "";
+  if (venue === "Function hall, 3rd floor, central library") {
+    extraMessage = `
+      <div style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif; font-size: larger; padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9; border-radius: 5px; margin-top: 20px;">
+        <p style="margin: 0 0 10px 0;"><strong>Note:</strong> Please contact Mr. Rajendra Prasad (ECE Department) one day prior to your event.</p>
+        <p style="margin: 0;"><strong>Contact No:</strong> <a href="tel:+918610591516" style="color: inherit; text-decoration: none;">+91 86105 91516</a></p>
+      </div>
+    `;
+  }
+
   var mailOptions = {
     from: process.env.GMAIL_ID,
     to: email,
-    subject: `Event registered in ${venue} on ${date.getDate()}/${
-      date.getMonth() + 1
-    }/${date.getFullYear()}`,
+    subject: `Event registered in ${venue} on ${date.getDate()}/${date.getMonth() + 1
+      }/${date.getFullYear()}`,
     html: `
 
     <h5 style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;font-size: larger">Your event
@@ -73,6 +82,8 @@ const sendMail = async (date, session, dept, event, venue, email) => {
               </td>
           </tr>
       </table>
+
+      ${extraMessage}
 
       <h3
           style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif ;padding-top: 1%;margin: 0%;margin-top: 2%;">
