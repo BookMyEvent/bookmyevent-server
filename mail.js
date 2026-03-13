@@ -19,7 +19,8 @@ const sendMail = async (date, session, dept, event, venue, email) => {
     extraMessage = `
       <div style="font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif; font-size: larger; padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9; border-radius: 5px; margin-top: 20px;">
         <p style="margin: 0 0 10px 0;"><strong>Note:</strong> Please contact Mr. Rajendra Prasad (ECE Department) one day prior to your event.</p>
-        <p style="margin: 0;"><strong>Contact No:</strong> <a href="tel:+918610591516" style="color: inherit; text-decoration: none;">+91 86105 91516</a></p>
+        <p style="margin: 0 0 5px 0;"><strong>Contact No:</strong> <a href="tel:+918610591516" style="color: inherit; text-decoration: none;">+91 86105 91516</a></p>
+        <p style="margin: 0;"><strong>Landline:</strong> 27152000 <strong>Ext:</strong> 201</p>
       </div>
     `;
   }
