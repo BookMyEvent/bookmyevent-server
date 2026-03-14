@@ -12,6 +12,9 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 let bodyParser = require("body-parser");
 const auth = getAuth(firebase);
+const cloudinary = require('./cloudinary-server');
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() });
 const eventModel = require('./Models/EventDetails');
 const userModel = require('./Models/UserModel');
 const sendMail = require('./mail');
@@ -33,6 +36,27 @@ app.use(bodyParser.json({ limit: '10mb', extended: true }))
 app.use(bodyParser.urlencoded({ limit: '10mb', extended: false }))
 app.use(express.json());
 
+// Upload Image to Cloudinary
+app.post("/api/uploadImage", upload.single('image'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No image provided' });
+        }
+        
+        const b64 = Buffer.from(req.file.buffer).toString("base64");
+        let dataURI = "data:" + req.file.mimetype + ";base64," + b64;
+        
+        const cldRes = await cloudinary.uploader.upload(dataURI, {
+            resource_type: "auto",
+            folder: "bookmyevent"
+        });
+        
+        res.json({ url: cldRes.secure_url });
+    } catch (error) {
+        console.error("Cloudinary upload error:", error);
+        res.status(500).json({ error: "Image upload failed" });
+    }
+});
 
 async function serverCheck(date, venue, session, id) {
     const res = await eventModel.find({ date, venue, session: { $in: ['Full Day', session] } });
