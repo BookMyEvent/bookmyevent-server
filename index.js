@@ -16,6 +16,7 @@ const cloudinary = require('./cloudinary-server');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
 const eventModel = require('./Models/EventDetails');
+const eventLockModel = require('./Models/EventLock');
 const userModel = require('./Models/UserModel');
 const sendMail = require('./mail');
 
@@ -58,14 +59,43 @@ app.post("/api/uploadImage", upload.single('image'), async (req, res) => {
     }
 });
 
-async function serverCheck(date, venue, session, id) {
-    const res = await eventModel.find({ date, venue, session: { $in: ['Full Day', session] } });
-    if (res.length === 0)
+// Two bookings conflict only if their actual start/end times overlap (or either
+// one is 'Full Day', which blocks the whole day). The `session` label (FN/AN/EVNG)
+// is just a UI convenience and isn't trustworthy on its own - a request could
+// carry any startTime/endTime regardless of which session label it's tagged with,
+// so the real overlap has to be checked directly instead of comparing labels.
+async function serverCheck(date, venue, session, startTime, endTime, id) {
+    const candidates = await eventModel.find({ date, venue });
+    const newStart = new Date(startTime);
+    const newEnd = new Date(endTime);
+
+    for (const existing of candidates) {
+        if (id && String(existing._id) === id) continue;
+
+        const isFullDayConflict = session === 'Full Day' || existing.session === 'Full Day';
+        const timesOverlap = newStart < existing.endTime && existing.startTime < newEnd;
+
+        if (isFullDayConflict || timesOverlap) return false;
+    }
+
+    return true;
+}
+
+// Atomically reserves the (date, venue) slot so only one request at a time can
+// run the check-then-insert/update below, even across separate server instances.
+// Backed by a unique index, so acquisition can't race like an in-memory flag would.
+async function acquireSlotLock(date, venue) {
+    try {
+        await eventLockModel.create({ date, venue });
         return true;
-    else if (String(res[0]._id) === id)
-        return true;
-    else
-        return false;
+    } catch (err) {
+        if (err.code === 11000) return false;
+        throw err;
+    }
+}
+
+async function releaseSlotLock(date, venue) {
+    await eventLockModel.deleteOne({ date, venue });
 }
 
 
@@ -110,20 +140,7 @@ app.post("/api/checkDate", async (req, res) => {
 
 //Add an Event
 
-
-let queue = []
-let processing = false;
-
-async function processNext() {
-    if (queue.length === 0) {
-        processing = false;
-        return;
-    }
-
-    processing = true;
-
-    const { req, res, next } = queue.shift();
-
+app.post("/api/addEvent", async (req, res) => {
     let { date,
         audience,
         venue,
@@ -141,53 +158,57 @@ async function processNext() {
         email
     } = req.body;
 
-    const status = venue === "OTHERS**" ? true : await serverCheck(date, venue, session);
+    const eventDoc = {
+        date,
+        audience,
+        venue,
+        event,
+        description,
+        startTime,
+        endTime,
+        session,
+        link,
+        club,
+        department,
+        image,
+        target: target_audience,
+        venueName
+    };
 
-    if (status === true) {
-        await eventModel.insertMany([
-            {
-                date,
-                audience,
-                venue,
-                event,
-                description,
-                startTime,
-                endTime,
-                session,
-                link,
-                club,
-                department,
-                image,
-                target: target_audience,
-                venueName
-            }
-        ])
-        try {
-            console.log("Attempting to send email...");
-            await sendMail(date, session, department != "false" ? department : club, event, venue === "OTHERS**" ? venueName : venue, email);
-            console.log("Email sent successfully.");
-        } catch (mailError) {
-            console.error("Error sending email:", mailError);
-            // Do not fail the request if email fails, but log it.
+    let inserted = false;
+
+    if (venue === "OTHERS**") {
+        await eventModel.insertMany([eventDoc]);
+        inserted = true;
+    } else {
+        const locked = await acquireSlotLock(date, venue);
+        if (!locked) {
+            return res.json({ status: "OOPS Slot has been allocated" });
         }
-        res.json({ status: "Success" });
+        try {
+            if (await serverCheck(date, venue, session, startTime, endTime)) {
+                await eventModel.insertMany([eventDoc]);
+                inserted = true;
+            }
+        } finally {
+            await releaseSlotLock(date, venue);
+        }
     }
-    else {
-        res.json({ status: "OOPS Slot has been allocated" })
+
+    if (!inserted) {
+        return res.json({ status: "OOPS Slot has been allocated" });
     }
-    processing = false;
-    processNext();
-}
 
-function addEventMiddleware(req, res, next) {
-    queue.push({ req, res, next });
-    if (!processing) {
-        processNext(); // Start processing if not already processing
+    try {
+        console.log("Attempting to send email...");
+        await sendMail(date, session, department != "false" ? department : club, event, venue === "OTHERS**" ? venueName : venue, email);
+        console.log("Email sent successfully.");
+    } catch (mailError) {
+        console.error("Error sending email:", mailError);
+        // Do not fail the request if email fails, but log it.
     }
-}
-
-
-app.post("/api/addEvent", addEventMiddleware);
+    res.json({ status: "Success" });
+});
 
 
 //Retrieve User
@@ -289,10 +310,30 @@ app.post("/api/retrieveEvent", async (req, res) => {
 app.post("/api/updateEvent", async (req, res) => {
     const { event } = req.body;
     let id = event._id;
-    const status = event.venue === "OTHERS**" ? true : await serverCheck(event.date, event.venue, event.session, id);
-    delete event._id;
-    if (status) {
+
+    if (event.venue === "OTHERS**") {
+        delete event._id;
         await eventModel.updateOne({ _id: id }, { $set: event }, [{ new: true }]);
+        return res.json({ status: "Success" });
+    }
+
+    const locked = await acquireSlotLock(event.date, event.venue);
+    if (!locked) {
+        return res.json({ status: "OOPS Slot has been booked" });
+    }
+
+    let status;
+    try {
+        status = await serverCheck(event.date, event.venue, event.session, event.startTime, event.endTime, id);
+        if (status) {
+            delete event._id;
+            await eventModel.updateOne({ _id: id }, { $set: event }, [{ new: true }]);
+        }
+    } finally {
+        await releaseSlotLock(event.date, event.venue);
+    }
+
+    if (status) {
         res.json({ status: "Success" })
     }
     else {
