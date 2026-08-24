@@ -59,23 +59,27 @@ app.post("/api/uploadImage", upload.single('image'), async (req, res) => {
     }
 });
 
-// Two bookings conflict only if their actual start/end times overlap (or either
-// one is 'Full Day', which blocks the whole day). The `session` label (FN/AN/EVNG)
-// is just a UI convenience and isn't trustworthy on its own - a request could
-// carry any startTime/endTime regardless of which session label it's tagged with,
-// so the real overlap has to be checked directly instead of comparing labels.
+// A venue is fully blocked for the entire day once any booking exists.
+// One venue = one event per day. This matches the original site behaviour
+// that the professor reported was broken.
+//
+// NOTE: We use a date-range query instead of exact date match because the
+// client sends a full Date object (e.g. 2026-08-24T18:30:00Z for IST midnight),
+// so a naive { date } equality check never matches stored documents.
 async function serverCheck(date, venue, session, startTime, endTime, id) {
-    const candidates = await eventModel.find({ date, venue });
-    const newStart = new Date(startTime);
-    const newEnd = new Date(endTime);
+    const dayStart = new Date(date);
+    dayStart.setUTCHours(0, 0, 0, 0);
+    const dayEnd = new Date(date);
+    dayEnd.setUTCHours(23, 59, 59, 999);
+
+    const candidates = await eventModel.find({
+        date: { $gte: dayStart, $lte: dayEnd },
+        venue
+    });
 
     for (const existing of candidates) {
         if (id && String(existing._id) === id) continue;
-
-        const isFullDayConflict = session === 'Full Day' || existing.session === 'Full Day';
-        const timesOverlap = newStart < existing.endTime && existing.startTime < newEnd;
-
-        if (isFullDayConflict || timesOverlap) return false;
+        return false; // any existing booking blocks the whole day for this venue
     }
 
     return true;
@@ -100,42 +104,32 @@ async function releaseSlotLock(date, venue) {
 
 
 
-// Check AVailability
-
+// Check Availability
+// Returns every booked venue for the given date regardless of session.
+// A venue is blocked for the whole day once any booking exists.
 app.post("/api/checkDate", async (req, res) => {
-
     /*
     Format -> {
                     blocked : [
-                                [event_id,event_venue],
+                                [event_id, event_venue],
                                 ...
                             ]
             }
-
     */
-    const { date, session } = req.body;
-    const result = await eventModel.find({ date, venue: { $ne: "OTHERS**" } });
-    let blocked = [];
-    if (session === "Full Day") {
-        for (let item of result) {
-            blocked.push([item._id, item.venue]);
-        }
-        res.json({
-            blocked
-        });
-    }
-    else {
-        for (let item of result) {
-            if (item.session === 'Full Day') {
-                blocked.push([item._id, item.venue]);
-            }
-            else if (item.session === session)
-                blocked.push([item._id, item.venue]);
-        }
-        res.json({
-            blocked
-        });
-    }
+    const { date } = req.body;
+    // Use a 24-hour range so the query works regardless of how the client
+    // serialised the date (full ISO timestamp vs plain date string).
+    const dayStart = new Date(date);
+    dayStart.setUTCHours(0, 0, 0, 0);
+    const dayEnd = new Date(date);
+    dayEnd.setUTCHours(23, 59, 59, 999);
+
+    const result = await eventModel.find({
+        date: { $gte: dayStart, $lte: dayEnd },
+        venue: { $ne: "OTHERS**" }
+    });
+    const blocked = result.map(item => [item._id, item.venue]);
+    res.json({ blocked });
 })
 
 //Add an Event
